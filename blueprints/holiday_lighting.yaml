@@ -1,0 +1,139 @@
+blueprint:
+  name: Holiday Lighting Schedule (Sunset & Optional Lights)
+  description: Change light colors between two dates at sunset and reset afterward. Works with 1–3 lights.
+  domain: automation
+  input:
+    light_1:
+      name: Light 1 (e.g. Red)
+      default: ''
+      selector:
+        entity:
+          domain: light
+          multiple: false
+    light_1_color:
+      name: Light 1 RGB Color
+      default: [255, 0, 0]
+      selector:
+        color_rgb: {}
+
+    light_2:
+      name: Light 2 (e.g. White)
+      default: ''
+      selector:
+        entity:
+          domain: light
+          multiple: false
+    light_2_color:
+      name: Light 2 RGB Color
+      default: [255, 255, 255]
+      selector:
+        color_rgb: {}
+
+    light_3:
+      name: Light 3 (e.g. Blue)
+      default: ''
+      selector:
+        entity:
+          domain: light
+          multiple: false
+    light_3_color:
+      name: Light 3 RGB Color
+      default: [0, 0, 255]
+      selector:
+        color_rgb: {}
+
+    start_date:
+      name: Start Date
+      selector:
+        date: {}
+
+    end_date:
+      name: End Date
+      selector:
+        date: {}
+
+    reset_color_temp:
+      name: Reset Color Temperature (mireds)
+      default: 300
+      selector:
+        number:
+          min: 150
+          max: 500
+          unit_of_measurement: mireds
+
+trigger:
+  - platform: sun
+    event: sunset
+
+condition:
+  - condition: or
+    conditions:
+      - condition: template
+        value_template: >
+          {{ now().date() >= strptime(inputs.start_date, "%Y-%m-%d").date()
+             and now().date() <= strptime(inputs.end_date, "%Y-%m-%d").date() }}
+      - condition: template
+        value_template: >
+          {{ now().date() == (strptime(inputs.end_date, "%Y-%m-%d").date() + timedelta(days=1)) }}
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ now().date() >= strptime(inputs.start_date, "%Y-%m-%d").date()
+                 and now().date() <= strptime(inputs.end_date, "%Y-%m-%d").date() }}
+        sequence:
+          - if: "{{ inputs.light_1 != '' }}"
+            then:
+              - service: light.turn_on
+                target:
+                  entity_id: !input light_1
+                data:
+                  rgb_color: !input light_1_color
+
+          - if: "{{ inputs.light_2 != '' }}"
+            then:
+              - service: light.turn_on
+                target:
+                  entity_id: !input light_2
+                data:
+                  rgb_color: !input light_2_color
+
+          - if: "{{ inputs.light_3 != '' }}"
+            then:
+              - service: light.turn_on
+                target:
+                  entity_id: !input light_3
+                data:
+                  rgb_color: !input light_3_color
+
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ now().date() == (strptime(inputs.end_date, "%Y-%m-%d").date() + timedelta(days=1)) }}
+        sequence:
+          - if: "{{ inputs.light_1 != '' }}"
+            then:
+              - service: light.turn_on
+                target:
+                  entity_id: !input light_1
+                data:
+                  color_temp: !input reset_color_temp
+
+          - if: "{{ inputs.light_2 != '' }}"
+            then:
+              - service: light.turn_on
+                target:
+                  entity_id: !input light_2
+                data:
+                  color_temp: !input reset_color_temp
+
+          - if: "{{ inputs.light_3 != '' }}"
+            then:
+              - service: light.turn_on
+                target:
+                  entity_id: !input light_3
+                data:
+                  color_temp: !input reset_color_temp
+mode: single
