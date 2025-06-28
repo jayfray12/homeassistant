@@ -3,6 +3,7 @@ description: Sets red, white, and blue lights for Memorial Day, July 4th (July 1
 trigger:
   - platform: sun
     event: sunset
+    offset: "+00:15:00"
 
 variables:
   today: "{{ now().date() }}"
