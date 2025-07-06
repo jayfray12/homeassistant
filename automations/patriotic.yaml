@@ -1,76 +1,89 @@
 alias: Patriotic Holiday Lights (Auto)
-description: Sets red, white, and blue lights for Memorial Day, July 4th (July 1–5), Labor Day, and Veterans Day
-trigger:
+description: >-
+  Sets red, white, and blue lights for Memorial Day, July 4th (July 1–5), Labor
+  Day, and Veterans Day
+triggers:
   - platform: sun
     event: sunset
     offset: "+00:15:00"
-
+  - platform: state
+    entity_id: 
+      - light.coach_light_1
+      - light.coach_light_2
+      - light.coach_light_3
+    from: "off"
+    to: "on"
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ should_set_colors }}"
+        sequence:
+          - target:
+              entity_id: light.coach_light_1
+            data:
+              rgb_color:
+                - 255
+                - 0
+                - 0
+            action: light.turn_on
+          - target:
+              entity_id: light.coach_light_2
+            data:
+              rgb_color:
+                - 255
+                - 255
+                - 255
+            action: light.turn_on
+          - target:
+              entity_id: light.coach_light_3
+            data:
+              rgb_color:
+                - 0
+                - 0
+                - 255
+            action: light.turn_on
+      - conditions:
+          - condition: template
+            value_template: "{{ should_reset }}"
+        sequence:
+          - target:
+              entity_id:
+                - light.coach_light_1
+                - light.coach_light_2
+                - light.coach_light_3
+            data:
+              color_temp: 300
+            action: light.turn_on
 variables:
   today: "{{ now().date() }}"
   year: "{{ now().year }}"
   july_start: "{{ strptime(year ~ '-07-01', '%Y-%m-%d').date() }}"
   july_end: "{{ strptime(year ~ '-07-05', '%Y-%m-%d').date() }}"
   veterans_day: "{{ strptime(year ~ '-11-11', '%Y-%m-%d').date() }}"
-  memorial_day: >
-    {% set last_day = namespace(date=none) %}
-    {% for day in range(25, 32) %}
+  memorial_day: |
+    {% set last_day = namespace(date=none) %} {% for day in range(25, 32) %}
       {% set dt = strptime(year ~ '-05-' ~ day|string, '%Y-%m-%d') %}
       {% if dt.weekday() == 0 %}
         {% set last_day.date = dt.date() %}
       {% endif %}
-    {% endfor %}
-    {{ last_day.date }}
-  labor_day: >
+    {% endfor %} {{ last_day.date }}
+  labor_day: |
     {% for day in range(1, 8) %}
       {% set dt = strptime(year ~ '-09-' ~ day|string, '%Y-%m-%d') %}
       {% if dt.weekday() == 0 %}
         {{ dt.date() }}
       {% endif %}
     {% endfor %}
-  should_set_colors: >
+  should_set_colors: |
     {{ today >= july_start and today <= july_end
        or today == memorial_day
        or today == labor_day
        or today == veterans_day }}
-  should_reset: >
+  should_reset: |
     {{ today == july_end + timedelta(days=1)
        or today == memorial_day + timedelta(days=1)
        or today == labor_day + timedelta(days=1)
        or today == veterans_day + timedelta(days=1) }}
-
-condition: []
-
-action:
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ should_set_colors }}"
-        sequence:
-          - service: light.turn_on
-            target:
-              entity_id: light.coach_light_1
-            data:
-              rgb_color: [255, 0, 0]  # Red
-          - service: light.turn_on
-            target:
-              entity_id: light.coach_light_2
-            data:
-              rgb_color: [255, 255, 255]  # White
-          - service: light.turn_on
-            target:
-              entity_id: light.coach_light_3
-            data:
-              rgb_color: [0, 0, 255]  # Blue
-      - conditions:
-          - condition: template
-            value_template: "{{ should_reset }}"
-        sequence:
-          - service: light.turn_on
-            target:
-              entity_id:
-                - light.coach_light_1
-                - light.coach_light_2
-                - light.coach_light_3
-            data:
-              color_temp: 300  # Warm white
 mode: single
