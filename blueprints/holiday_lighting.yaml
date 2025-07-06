@@ -105,18 +105,9 @@ trigger:
     offset: !input sunset_offset
 
   - platform: state
-    entity_id: >
-      {% set entities = [] %}
-      {% if inputs.light_1 != '' %}
-        {% set entities = entities + [inputs.light_1] %}
-      {% endif %}
-      {% if inputs.light_2 != '' %}
-        {% set entities = entities + [inputs.light_2] %}
-      {% endif %}
-      {% if inputs.light_3 != '' %}
-        {% set entities = entities + [inputs.light_3] %}
-      {% endif %}
-      {{ entities }}
+    # FIX: Using reject filter for cleaner and correct entity_id handling
+    entity_id: >-
+      {{ [inputs.light_1, inputs.light_2, inputs.light_3] | reject('equalto', '') | list }}
     from: "off"
     to: "on"
     enabled: "{{ inputs.enable_light_on_trigger }}"
@@ -154,7 +145,7 @@ condition:
       - condition: template
         value_template: >
           {% set end_month = inputs.end_month_day.split('-')[0] | int %}
-          {% set end_day = inputs.end_month_day.split('-')[1] | int %}
+          {% set end_day = inputs.end_month_day.split('-('-')[1] | int %}
 
           {% set next_day = (now() + timedelta(days=1)) %}
           {% set next_day_month = next_day.month %}
