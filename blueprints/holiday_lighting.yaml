@@ -75,6 +75,28 @@ blueprint:
       selector:
         boolean: {}
 
+    brightness_pct:
+      name: Holiday Brightness (%)
+      description: 'Brightness percentage for holiday colors (1-100).'
+      default: 100
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: '%'
+          mode: slider # Makes it a slider in the UI
+
+    reset_brightness_pct:
+      name: Reset Brightness (%)
+      description: 'Brightness percentage for reset color (1-100).'
+      default: 50
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: '%'
+          mode: slider # Makes it a slider in the UI
+
 
 trigger:
   - platform: sun
@@ -115,6 +137,7 @@ action:
                   entity_id: !input light_1
                 data:
                   rgb_color: !input light_1_color
+                  brightness_pct: !input brightness_pct
 
           - if: "{{ inputs.light_2 != '' }}"
             then:
@@ -123,6 +146,7 @@ action:
                   entity_id: !input light_2
                 data:
                   rgb_color: !input light_2_color
+                  brightness_pct: !input brightness_pct
 
           - if: "{{ inputs.light_3 != '' }}"
             then:
@@ -131,6 +155,7 @@ action:
                   entity_id: !input light_3
                 data:
                   rgb_color: !input light_3_color
+                  brightness_pct: !input brightness_pct
 
       - conditions:
           - condition: template
@@ -144,6 +169,7 @@ action:
                   entity_id: !input light_1
                 data:
                   color_temp: !input reset_color_temp
+                  brightness_pct: !input reset_brightness_pct
 
           - if: "{{ inputs.light_2 != '' }}"
             then:
@@ -152,6 +178,7 @@ action:
                   entity_id: !input light_2
                 data:
                   color_temp: !input reset_color_temp
+                  brightness_pct: !input reset_brightness_pct
 
           - if: "{{ inputs.light_3 != '' }}"
             then:
@@ -160,4 +187,5 @@ action:
                   entity_id: !input light_3
                 data:
                   color_temp: !input reset_color_temp
+                  brightness_pct: !input reset_brightness_pct
 mode: single
