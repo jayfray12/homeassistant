@@ -54,16 +54,40 @@ blueprint:
 
     reset_color_temp:
       name: Reset Color Temperature (mireds)
-      default: 300
+      default: 370
       selector:
         number:
           min: 150
           max: 500
           unit_of_measurement: mireds
 
+    sunset_offset:
+      name: Sunset Offset (HH:MM:SS)
+      description: 'Offset from sunset for the primary trigger. E.g., +00:15:00 for 15 mins after sunset.'
+      default: '+00:00:00'
+      selector:
+        text: {}
+
+    enable_light_on_trigger:
+      name: Enable Light On Trigger
+      description: 'If enabled, the automation will also trigger when any of the selected lights turn on, to ensure colors are applied.'
+      default: true
+      selector:
+        boolean: {}
+
+
 trigger:
   - platform: sun
     event: sunset
+    offset: !input sunset_offset
+  - platform: state
+    entity_id:
+      - !input light_1
+      - !input light_2
+      - !input light_3
+    from: "off"
+    to: "on"
+    enabled: "{{ inputs.enable_light_on_trigger }}"
 
 condition:
   - condition: or
@@ -71,7 +95,7 @@ condition:
       - condition: template
         value_template: >
           {{ now().date() >= strptime(inputs.start_date, "%Y-%m-%d").date()
-             and now().date() <= strptime(inputs.end_date, "%Y-%m-%d").date() }}
+            and now().date() <= strptime(inputs.end_date, "%Y-%m-%d").date() }}
       - condition: template
         value_template: >
           {{ now().date() == (strptime(inputs.end_date, "%Y-%m-%d").date() + timedelta(days=1)) }}
@@ -82,7 +106,7 @@ action:
           - condition: template
             value_template: >
               {{ now().date() >= strptime(inputs.start_date, "%Y-%m-%d").date()
-                 and now().date() <= strptime(inputs.end_date, "%Y-%m-%d").date() }}
+                and now().date() <= strptime(inputs.end_date, "%Y-%m-%d").date() }}
         sequence:
           - if: "{{ inputs.light_1 != '' }}"
             then:
