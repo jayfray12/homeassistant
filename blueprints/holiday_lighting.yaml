@@ -105,7 +105,7 @@ trigger:
     offset: !input sunset_offset
 
   - platform: state
-    # FIX: Using reject filter for cleaner and correct entity_id handling
+    # THIS SECTION HAS THE FIX FOR THE CURRENT ERROR:
     entity_id: >-
       {{ [inputs.light_1, inputs.light_2, inputs.light_3] | reject('equalto', '') | list }}
     from: "off"
@@ -145,7 +145,7 @@ condition:
       - condition: template
         value_template: >
           {% set end_month = inputs.end_month_day.split('-')[0] | int %}
-          {% set end_day = inputs.end_month_day.split('-('-')[1] | int %}
+          {% set end_day = inputs.end_month_day.split('-')[1] | int %}
 
           {% set next_day = (now() + timedelta(days=1)) %}
           {% set next_day_month = next_day.month %}
