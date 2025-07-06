@@ -156,11 +156,18 @@ action:
                   rgb_color: !input light_2_color
                   brightness_pct: !input brightness_pct
 
-          - if: "{{ inputs.light_3 != '' }}"
+          - variables:
+              target_entities: >
+                {% set entities = [] %}
+                {% if inputs.light_3 != '' %}
+                  {% set entities = entities + [inputs.light_3] %}
+                {% endif %}
+                {{ entities }}
+            if: "{{ target_entities | length > 0 }}"
             then:
               - service: light.turn_on
                 target:
-                  entity_id: !input light_3
+                  entity_id: "{{ target_entities }}"
                 data:
                   rgb_color: !input light_3_color
                   brightness_pct: !input brightness_pct
