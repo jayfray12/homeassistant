@@ -177,29 +177,24 @@ action:
             value_template: >
               {{ now().date() == (strptime(inputs.end_date, "%Y-%m-%d").date() + timedelta(days=1)) }}
         sequence:
-          - if: "{{ inputs.light_1 != '' }}"
+          - variables:
+              target_entities_reset: >
+                {% set entities = [] %}
+                {% if inputs.light_1 != '' %}
+                  {% set entities = entities + [inputs.light_1] %}
+                {% endif %}
+                {% if inputs.light_2 != '' %}
+                  {% set entities = entities + [inputs.light_2] %}
+                {% endif %}
+                {% if inputs.light_3 != '' %}
+                  {% set entities = entities + [inputs.light_3] %}
+                {% endif %}
+                {{ entities }}
+            if: "{{ target_entities_reset | length > 0 }}"
             then:
               - service: light.turn_on
                 target:
-                  entity_id: !input light_1
-                data:
-                  color_temp: !input reset_color_temp
-                  brightness_pct: !input reset_brightness_pct
-
-          - if: "{{ inputs.light_2 != '' }}"
-            then:
-              - service: light.turn_on
-                target:
-                  entity_id: !input light_2
-                data:
-                  color_temp: !input reset_color_temp
-                  brightness_pct: !input reset_brightness_pct
-
-          - if: "{{ inputs.light_3 != '' }}"
-            then:
-              - service: light.turn_on
-                target:
-                  entity_id: !input light_3
+                  entity_id: "{{ target_entities_reset }}"
                 data:
                   color_temp: !input reset_color_temp
                   brightness_pct: !input reset_brightness_pct
