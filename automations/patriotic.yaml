@@ -11,7 +11,7 @@ triggers:
       - light.coach_light_1
       - light.coach_light_2
       - light.coach_light_3
-    from: "off"
+    from: ['off', 'unavailable']
     to: "on"
 conditions: []
 actions:
