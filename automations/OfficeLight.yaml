@@ -2,10 +2,10 @@ alias: Office Light Weekday Schedule
 description: Turn on office light at 9am if home; turn off at 5pm if on.
 triggers:
   - at: "09:00:00"
-    trigger: time
+    platform: time 
   - at: "17:00:00"
-    trigger: time
-conditions: []
+    platform: time 
+conditions: [] 
 actions:
   - choose:
       - conditions:
@@ -17,15 +17,14 @@ actions:
               - thu
               - fri
           - condition: template
-            value_template: "{{ now.strftime('%H:%M') == '09:00' }}"
+            value_template: "{{ now().hour == 9 and now().minute == 0 }}"
           - condition: state
             entity_id: person.jason
             state: home
         sequence:
-          - target:
+          - service: switch.turn_on 
+            target:
               entity_id: switch.office_light
-            action: light.turn_on
-            data: {}
       - conditions:
           - condition: time
             weekday:
@@ -35,13 +34,12 @@ actions:
               - thu
               - fri
           - condition: template
-            value_template: "{{ now.strftime('%H:%M') == '17:00' }}"
+            value_template: "{{ now().hour == 17 and now().minute == 0 }}" 
           - condition: state
             entity_id: switch.office_light
             state: "on"
         sequence:
-          - target:
+          - service: switch.turn_off 
+            target:
               entity_id: switch.office_light
-            action: light.turn_off
-            data: {}
 mode: single
