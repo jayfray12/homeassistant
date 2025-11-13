@@ -111,7 +111,7 @@ trigger:
       - !input light_3
     from: ['off', 'unavailable']
     to: "on"
-    enabled: "{{ inputs.enable_light_on_trigger }}"
+    enabled: "{{ !input enable_light_on_trigger }}"
 
 condition:
   - condition: or
