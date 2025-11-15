@@ -1,0 +1,34 @@
+alias: Porch Light Schedule
+description: >-
+  Turn on porch lights 10 minutes after sunset and off 10 minutes before
+  sunrise.
+triggers:
+  - event: sunset
+    offset: "00:05:00"
+    id: "on"
+    trigger: sun
+  - event: sunrise
+    offset: "-00:10:00"
+    id: "off"
+    trigger: sun
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "on"
+        sequence:
+          - target:
+              entity_id: switch.front_porch
+            action: switch.turn_on
+            data: {}
+      - conditions:
+          - condition: trigger
+            id: "off"
+        sequence:
+          - target:
+              entity_id: switch.front_porch
+            action: switch.turn_off
+            data: {}
+    default: []
+mode: single
