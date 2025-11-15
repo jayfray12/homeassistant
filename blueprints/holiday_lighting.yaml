@@ -63,20 +63,6 @@ blueprint:
           max: 500
           unit_of_measurement: mireds
 
-    sunset_offset:
-      name: Sunset Offset (HH:MM:SS)
-      description: 'Offset from sunset for the primary trigger. E.g., +00:15:00 for 15 mins after sunset.'
-      default: '+00:00:00'
-      selector:
-        text: {}
-
-    enable_light_on_trigger:
-      name: Enable Light On Trigger
-      description: 'If enabled, the automation will also trigger when any of the selected lights turn on, to ensure colors are applied.'
-      default: true
-      selector:
-        boolean: {}
-
     brightness_pct:
       name: Holiday Brightness (%)
       description: 'Brightness percentage for holiday colors (1-100).'
@@ -99,11 +85,28 @@ blueprint:
           unit_of_measurement: '%'
           mode: slider
 
-trigger:
-  - platform: sun
-    event: sunset
-    offset: !input sunset_offset
+variables:
+  in_holiday_range: >
+    {% set s = inputs.start_month_day.split('-') %} 
+    {% set e = inputs.end_month_day.split('-') %} 
+    {% set sm, sd = s[0] | int, s[1] | int %} 
+    {% set em, ed = e[0] | int, e[1] | int %} 
+    {% set cm, cd = now().month, now().day %}
 
+    {% if sm > em %}
+      {{ (cm > sm or (cm == sm and cd >= sd)) or (cm < em or (cm == em and cd <= ed)) }}
+    {% elif sm == em %}
+      {{ cm == sm and sd <= cd <= ed }}
+    {% else %}
+      {{ (cm > sm or (cm == sm and cd >= sd)) and (cm < em or (cm == em and cd <= ed)) }}
+    {% endif %}
+  is_reset_day: >
+    {% set e = inputs.end_month_day.split('-') %} 
+    {% set em, ed = e[0] | int, e[1] | int %} 
+    {% set n = now() + timedelta(days=1) %} 
+    {{ n.month == em and n.day == ed }}
+
+trigger:
   - platform: state
     entity_id: 
       - !input light_1
@@ -111,137 +114,35 @@ trigger:
       - !input light_3
     from: ['off', 'unavailable']
     to: "on"
-    enabled: "{{ inputs.enable_light_on_trigger }}"
 
-condition:
-  - condition: or
-    conditions:
-      - condition: template
-        value_template: >
-          {% set start_md = inputs.start_month_day %}
-          {% set end_md = inputs.end_month_day %}
-
-          {% set start_month = start_md.split('-')[0] | int %}
-          {% set start_day = start_md.split('-')[1] | int %}
-          {% set end_month = end_md.split('-')[0] | int %}
-          {% set end_day = end_md.split('-')[1] | int %}
-
-          {% set current_month = now().month %}
-          {% set current_day = now().day %}
-
-          {# Handle cases where the period spans across year end (e.g., Dec 15 to Jan 5) #}
-          {% if start_month > end_month %}
-            {# Period spans year end, e.g., Nov to Jan #}
-            {{ (current_month > start_month or (current_month == start_month and current_day >= start_day)) or
-               (current_month < end_month or (current_month == end_month and current_day <= end_day)) }}
-          {% elif start_month == end_month %}
-            {# Period within the same month #}
-            {{ current_month == start_month and current_day >= start_day and current_day <= end_day }}
-          {% else %}
-            {# Period within the same year, normal range #}
-            {{ (current_month > start_month or (current_month == start_month and current_day >= start_day)) and
-               (current_month < end_month or (current_month == end_month and current_day <= end_day)) }}
-          {% endif %}
-
-      - condition: template
-        value_template: >
-          {% set end_month = inputs.end_month_day.split('-')[0] | int %}
-          {% set end_day = inputs.end_month_day.split('-')[1] | int %}
-
-          {% set next_day = (now() + timedelta(days=1)) %}
-          {% set next_day_month = next_day.month %}
-          {% set next_day_day = next_day.day %}
-
-          {{ next_day_month == end_month and next_day_day == end_day }}
-
+conditions: []
 action:
   - choose:
-      - conditions:
-          - condition: template
-            value_template: >
-              {% set start_md = inputs.start_month_day %}
-              {% set end_md = inputs.end_month_day %}
-
-              {% set start_month = start_md.split('-')[0] | int %}
-              {% set start_day = start_md.split('-')[1] | int %}
-              {% set end_month = end_md.split('-')[0] | int %}
-              {% set end_day = end_md.split('-')[1] | int %}
-
-              {% set current_month = now().month %}
-              {% set current_day = now().day %}
-
-              {% if start_month > end_month %}
-                {{ (current_month > start_month or (current_month == start_month and current_day >= start_day)) or
-                   (current_month < end_month or (current_month == end_month and current_day <= end_day)) }}
-              {% elif start_month == end_month %}
-                {{ current_month == start_month and current_day >= start_day and current_day <= end_day }}
-              {% else %}
-                {{ (current_month > start_month or (current_month == start_month and current_day >= start_day)) and
-                   (current_month < end_month or (current_month == end_month and current_day <= end_day)) }}
-              {% endif %}
-        sequence:
-          - if: "{{ inputs.light_1 != '' }}"
-            then:
+    - conditions: "{{ in_holiday_range }}"
+      sequence:
+        - repeat:
+            for_each:
+              - { light: !input light_1, color: !input light_1_color }
+              - { light: !input light_2, color: !input light_2_color }
+              - { light: !input light_3, color: !input light_3_color }
+            sequence:
               - service: light.turn_on
                 target:
-                  entity_id: !input light_1
+                  entity_id: "{{ repeat.item.light }}"
                 data:
-                  rgb_color: !input light_1_color
+                  rgb_color: "{{ repeat.item.color }}"
                   brightness_pct: !input brightness_pct
-
-          - if: "{{ inputs.light_2 != '' }}"
-            then:
+    - conditions: "{{ is_reset_day }}"
+      sequence:
+        - repeat:
+            for_each:
+              - !input light_1
+              - !input light_2
+              - !input light_3
+            sequence:
               - service: light.turn_on
                 target:
-                  entity_id: !input light_2
-                data:
-                  rgb_color: !input light_2_color
-                  brightness_pct: !input brightness_pct
-
-          - if: "{{ inputs.light_3 != '' }}"
-            then:
-              - service: light.turn_on
-                target:
-                  entity_id: !input light_3
-                data:
-                  rgb_color: !input light_3_color
-                  brightness_pct: !input brightness_pct
-
-      - conditions:
-          - condition: template
-            value_template: >
-              {% set end_month = inputs.end_month_day.split('-')[0] | int %}
-              {% set end_day = inputs.end_month_day.split('-')[1] | int %}
-
-              {% set next_day = (now() + timedelta(days=1)) %}
-              {% set next_day_month = next_day.month %}
-              {% set next_day_day = next_day.day %}
-
-              {{ next_day_month == end_month and next_day_day == end_day }}
-        sequence:
-          - if: "{{ inputs.light_1 != '' }}"
-            then:
-              - service: light.turn_on
-                target:
-                  entity_id: !input light_1
-                data:
-                  color_temp: !input reset_color_temp
-                  brightness_pct: !input reset_brightness_pct
-
-          - if: "{{ inputs.light_2 != '' }}"
-            then:
-              - service: light.turn_on
-                target:
-                  entity_id: !input light_2
-                data:
-                  color_temp: !input reset_color_temp
-                  brightness_pct: !input reset_brightness_pct
-
-          - if: "{{ inputs.light_3 != '' }}"
-            then:
-              - service: light.turn_on
-                target:
-                  entity_id: !input light_3
+                  entity_id: "{{ repeat.item }}"
                 data:
                   color_temp: !input reset_color_temp
                   brightness_pct: !input reset_brightness_pct

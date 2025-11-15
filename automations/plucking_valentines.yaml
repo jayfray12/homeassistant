@@ -1,0 +1,73 @@
+alias: Valentines Day Plucking Table
+triggers:
+  - entity_id: light.plucking_table_left
+    from:
+      - "off"
+      - unavailable
+    to: "on"
+    trigger: state
+  - entity_id: light.plucking_table_right
+    from:
+      - "off"
+      - unavailable
+    to: "on"
+    trigger: state
+conditions: []
+variables:
+  start_date:
+    month: 2
+    day: 13
+  end_date:
+    month: 2
+    day: 15
+  left_color: [200, 0, 0]
+  right_color: [255, 192, 203]
+  in_holiday_range: >
+    {% set cm, cd = now().month, now().day %} {% set sm, sd = start_date.month,
+    start_date.day %} {% set em, ed = end_date.month, end_date.day %}
+
+    {% if sm > em %}
+      {{ (cm > sm or (cm == sm and cd >= sd)) or (cm < em or (cm == em and cd <= ed)) }}
+    {% elif sm == em %}
+      {{ cm == sm and sd <= cd <= ed }}
+    {% else %}
+      {{ (cm > sm or (cm == sm and cd >= sd)) and (cm < em or (cm == em and cd <= ed)) }}
+    {% endif %}
+  is_reset_day: >
+    {% set n = now() + timedelta(days=1) %} {% set em, ed = end_date.month,
+    end_date.day %} {{ n.month == em and n.day == ed }}
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ in_holiday_range }}"
+        sequence:
+          - repeat:
+              for_each:
+                - light: light.plucking_table_left
+                  color: "{{ left_color }}"
+                - light: light.plucking_table_right
+                  color: "{{ right_color }}"
+              sequence:
+                - target:
+                    entity_id: "{{ repeat.item.light }}"
+                  data:
+                    rgb_color: "{{ repeat.item.color }}"
+                    brightness_pct: 100
+                  action: light.turn_on
+      - conditions:
+          - condition: template
+            value_template: "{{ is_reset_day }}"
+        sequence:
+          - repeat:
+              for_each:
+                - light.plucking_table_left
+                - light.plucking_table_right
+              sequence:
+                - target:
+                    entity_id: "{{ repeat.item }}"
+                  data:
+                    color_temp: 370
+                    brightness_pct: 50
+                  action: light.turn_on
+mode: single

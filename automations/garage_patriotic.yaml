@@ -1,0 +1,96 @@
+alias: Patriotic Garage Lights
+triggers:
+  - entity_id: light.coach_light_1
+    from:
+      - "off"
+      - unavailable
+    to: "on"
+    trigger: state
+  - entity_id: light.coach_light_2
+    from:
+      - "off"
+      - unavailable
+    to: "on"
+    trigger: state
+  - entity_id: light.coach_light_3
+    from:
+      - "off"
+      - unavailable
+    to: "on"
+    trigger: state
+conditions: []
+variables:
+  holidays:
+    - [7, 4]
+    - [11, 11]
+  # Compute Memorial Day (last Monday of May)
+  memorial_day: >
+    {% set last_day = now().replace(month=5, day=31) %}
+    {% set weekday = last_day.weekday() %}
+    {% set delta = (weekday - 0) % 7 %} {# 0 = Monday #}
+    {{ (last_day - timedelta(days=delta)).day }}
+  # Compute Labor Day (first Monday of September)
+  labor_day: >
+    {% set first_day = now().replace(month=9, day=1) %}
+    {% set weekday = first_day.weekday() %}
+    {% set delta = (0 - weekday) % 7 %} {# 0 = Monday #}
+    {{ (first_day + timedelta(days=delta)).day }}
+  color_1: [255, 0, 0]
+  color_2: [255, 255, 255]
+  color_3: [0, 0, 255]
+  in_holiday_range: >
+    {% set cm, cd = now().month, now().day %}
+    {% set holidays = fixed_holidays + [[5, memorial_day|int], [9, labor_day|int]] %}
+    {% for m, d in holidays %}
+      {% if cm == m and cd == d %}
+        {{ true }}
+      {% endif %}
+    {% endfor %}
+    {{ false }}
+  is_reset_day: >
+    {% set n = now() + timedelta(days=1) %}
+    {% set holidays = fixed_holidays + [[5, memorial_day|int], [9, labor_day|int]] %}
+    {% for m, d in holidays %}
+      {% if n.month == m and n.day == d %}
+        {{ true }}
+      {% endif %}
+    {% endfor %}
+    {{ false }}
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ in_holiday_range }}"
+        sequence:
+          - repeat:
+              for_each:
+                - light: light.coach_light_1
+                  color: "{{ color_1 }}"
+                - light: light.coach_light_2
+                  color: "{{ color_2 }}"
+                - light: light.coach_light_3
+                  color: "{{ color_3 }}"
+              sequence:
+                - target:
+                    entity_id: "{{ repeat.item.light }}"
+                  data:
+                    rgb_color: "{{ repeat.item.color }}"
+                    brightness_pct: 100
+                  action: light.turn_on
+      - conditions:
+          - condition: template
+            value_template: "{{ is_reset_day }}"
+        sequence:
+          - repeat:
+              for_each:
+                - light.coach_light_1
+                - light.coach_light_2
+                - light.coach_light_3
+              sequence:
+                - target:
+                    entity_id: "{{ repeat.item }}"
+                  data:
+                    color_temp: 370
+                    brightness_pct: 50
+                  action: light.turn_on
+mode: single
